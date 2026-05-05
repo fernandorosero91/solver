@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NIIF PYMES — Sección 5 · Estado de Resultado Integral</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0c0f14;
+    --surface:   #131720;
+    --card:      #1a1f2e;
+    --border:    #252d40;
+    --accent:    #c9a84c;
+    --accent2:   #7eb8d4;
+    --ok:        #4caf6e;
+    --err:       #e05a5a;
+    --text:      #dde3ef;
+    --muted:     #6b778f;
+    --radius:    12px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-weight: 300;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Fondo decorativo ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 80% 10%, rgba(201,168,76,.08) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 50% at 10% 80%, rgba(126,184,212,.06) 0%, transparent 55%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Header ── */
+  header {
+    position: relative; z-index: 1;
+    border-bottom: 1px solid var(--border);
+    padding: 36px 48px 28px;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .header-left .label {
+    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--accent); font-family: 'Source Serif 4'; font-weight: 400;
+    margin-bottom: 6px;
+  }
+  .header-left h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(22px, 3vw, 34px);
+    font-weight: 700; color: #eef2ff; line-height: 1.15;
+  }
+  .header-left h1 span { color: var(--accent); }
+  .header-right {
+    display: flex; gap: 24px; align-items: center;
+  }
+  .stat-pill {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 40px;
+    padding: 7px 18px;
+    font-size: 13px; color: var(--muted);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .stat-pill b { color: var(--text); font-weight: 600; }
+
+  /* ── Progress bar ── */
+  .progress-wrap {
+    position: relative; z-index: 1;
+    padding: 0 48px;
+    margin: 24px 0 0;
+  }
+  .progress-track {
+    height: 3px; background: var(--border); border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent));
+    border-radius: 2px;
+    transition: width .5s cubic-bezier(.4,0,.2,1);
+    width: 0%;
+  }
+  .progress-label {
+    font-size: 11px; color: var(--muted); margin-top: 7px;
+    letter-spacing: .5px;
+  }
+
+  /* ── Main layout ── */
+  main {
+    position: relative; z-index: 1;
+    max-width: 820px; margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* ── Question card ── */
+  .q-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 36px 36px 28px;
+    margin-bottom: 32px;
+    position: relative;
+    transition: border-color .3s;
+    animation: fadeUp .4s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .q-card.answered-ok  { border-color: rgba(76,175,110,.45); }
+  .q-card.answered-err { border-color: rgba(224,90,90,.45); }
+
+  .q-num {
+    position: absolute; top: -14px; left: 28px;
+    background: var(--accent);
+    color: #0c0f14;
+    font-family: 'Playfair Display'; font-size: 13px; font-weight: 700;
+    padding: 3px 14px; border-radius: 20px;
+    letter-spacing: 1px;
+  }
+  .q-text {
+    font-size: 16px; line-height: 1.7; color: #cdd6f4;
+    margin-bottom: 24px; padding-top: 4px;
+  }
+  .q-text strong { color: var(--accent); font-weight: 600; }
+
+  /* ── Options ── */
+  .options { display: flex; flex-direction: column; gap: 10px; }
+
+  .opt {
+    display: flex; align-items: flex-start; gap: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 13px 16px;
+    cursor: pointer;
+    transition: border-color .2s, background .2s, transform .15s;
+    user-select: none;
+  }
+  .opt:hover:not(.locked) {
+    border-color: var(--accent2);
+    background: rgba(126,184,212,.07);
+    transform: translateX(3px);
+  }
+  .opt-letter {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Playfair Display'; font-size: 13px; font-weight: 700;
+    color: var(--muted);
+    transition: all .2s;
+  }
+  .opt-text {
+    font-size: 14.5px; line-height: 1.55; color: var(--text);
+    padding-top: 3px;
+  }
+
+  /* States */
+  .opt.selected { border-color: var(--accent2); background: rgba(126,184,212,.09); }
+  .opt.selected .opt-letter { border-color: var(--accent2); color: var(--accent2); background: rgba(126,184,212,.15); }
+
+  .opt.correct { border-color: var(--ok) !important; background: rgba(76,175,110,.1) !important; }
+  .opt.correct .opt-letter { border-color: var(--ok); color: var(--ok); background: rgba(76,175,110,.18); }
+
+  .opt.wrong { border-color: var(--err) !important; background: rgba(224,90,90,.08) !important; }
+  .opt.wrong .opt-letter { border-color: var(--err); color: var(--err); background: rgba(224,90,90,.15); }
+
+  .opt.locked { cursor: default; }
+  .opt.locked:not(.correct):not(.wrong) { opacity: .55; }
+
+  /* ── Feedback ── */
+  .feedback {
+    display: none;
+    margin-top: 18px;
+    padding: 14px 16px;
+    border-radius: 8px;
+    font-size: 13.5px; line-height: 1.6;
+    border-left: 3px solid;
+  }
+  .feedback.ok  { background: rgba(76,175,110,.1);  border-color: var(--ok);  color: #a3e4b4; display: block; }
+  .feedback.err { background: rgba(224,90,90,.08);  border-color: var(--err); color: #f4a0a0; display: block; }
+  .feedback-icon { font-size: 16px; margin-right: 6px; }
+
+  /* ── Confirm button ── */
+  .btn-confirm {
+    margin-top: 18px;
+    background: var(--accent);
+    color: #0c0f14;
+    border: none; border-radius: 8px;
+    padding: 10px 26px;
+    font-family: 'Source Serif 4'; font-size: 14px; font-weight: 600;
+    cursor: pointer;
+    transition: opacity .2s, transform .15s;
+    letter-spacing: .3px;
+  }
+  .btn-confirm:hover { opacity: .88; transform: translateY(-1px); }
+  .btn-confirm:disabled { opacity: .3; cursor: default; transform: none; }
+
+  /* ── Results panel ── */
+  #results {
+    display: none;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 48px 40px;
+    text-align: center;
+    animation: fadeUp .5s ease;
+  }
+  #results h2 {
+    font-family: 'Playfair Display'; font-size: 30px;
+    color: #eef2ff; margin-bottom: 8px;
+  }
+  #results .score-display {
+    font-size: 72px; font-family: 'Playfair Display';
+    font-weight: 700; line-height: 1;
+    margin: 24px 0 8px;
+  }
+  #results .score-label {
+    font-size: 14px; color: var(--muted); margin-bottom: 32px;
+  }
+  .result-bars {
+    display: flex; justify-content: center; gap: 32px;
+    margin-bottom: 36px; flex-wrap: wrap;
+  }
+  .r-bar { text-align: center; }
+  .r-bar .r-val { font-size: 28px; font-family: 'Playfair Display'; font-weight: 700; }
+  .r-bar .r-lbl { font-size: 12px; color: var(--muted); margin-top: 2px; letter-spacing: 1px; text-transform: uppercase; }
+  .r-bar.ok  .r-val { color: var(--ok); }
+  .r-bar.err .r-val { color: var(--err); }
+
+  .btn-retry {
+    background: transparent;
+    border: 1.5px solid var(--accent);
+    color: var(--accent);
+    border-radius: 8px;
+    padding: 11px 34px;
+    font-family: 'Source Serif 4'; font-size: 14px; font-weight: 600;
+    cursor: pointer;
+    transition: background .2s, color .2s;
+    letter-spacing: .3px;
+  }
+  .btn-retry:hover { background: var(--accent); color: #0c0f14; }
+
+  /* ── Footnote ── */
+  footer {
+    position: relative; z-index: 1;
+    text-align: center; padding: 0 24px 36px;
+    font-size: 11.5px; color: var(--muted); letter-spacing: .5px;
+  }
+
+  @media (max-width: 600px) {
+    header { padding: 24px 20px 20px; }
+    .progress-wrap { padding: 0 20px; }
+    main { padding: 28px 16px 60px; }
+    .q-card { padding: 28px 20px 22px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="label">Banco de Preguntas · NIIF para PYMES</div>
+    <h1>Sección 5 — <span>Estado de Resultado Integral</span></h1>
+  </div>
+  <div class="header-right">
+    <div class="stat-pill">Preguntas <b id="stat-total">10</b></div>
+    <div class="stat-pill">Respondidas <b id="stat-done">0</b></div>
+  </div>
+</header>
+
+<div class="progress-wrap">
+  <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  <div class="progress-label" id="progress-label">0 de 10 preguntas respondidas</div>
+</div>
+
+<main>
+  <div id="quiz-container"></div>
+  <div id="results">
+    <div style="font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:10px">Resultado Final</div>
+    <h2>Evaluación completada</h2>
+    <div class="score-display" id="res-score"></div>
+    <div class="score-label">Puntuación sobre 100</div>
+    <div class="result-bars">
+      <div class="r-bar ok"><div class="r-val" id="res-ok">0</div><div class="r-lbl">Correctas</div></div>
+      <div class="r-bar err"><div class="r-val" id="res-err">0</div><div class="r-lbl">Incorrectas</div></div>
+    </div>
+    <p id="res-msg" style="font-size:15px;color:var(--muted);max-width:420px;margin:0 auto 28px;line-height:1.65"></p>
+    <button class="btn-retry" onclick="initQuiz()">↺ Reiniciar cuestionario</button>
+  </div>
+</main>
+
+<footer>NIIF para las PYMES · IASB · Sección 5 — Solo con fines educativos y de práctica</footer>
+
+<script>
+const QUESTIONS = [
+  {
+    id: 1,
+    text: "Según la <strong>Sección 5 de NIIF para PYMES</strong>, ¿cuál es el objetivo principal del Estado de Resultado Integral?",
+    opts: [
+      "Mostrar la situación financiera de la entidad en una fecha determinada.",
+      "Presentar el rendimiento financiero de la entidad durante un período, incluyendo ingresos y gastos reconocidos.",
+      "Revelar los cambios en el patrimonio neto durante el ejercicio.",
+      "Detallar los flujos de efectivo generados por las actividades operativas, de inversión y financiación."
+    ],
+    correct: 1,
+    feedback: "Correcto. La Sección 5 establece que el Estado de Resultado Integral presenta el rendimiento financiero de la entidad para el período, mostrando ingresos, gastos, ganancias y pérdidas, incluyendo las partidas de otro resultado integral."
+  },
+  {
+    id: 2,
+    text: "Una PYME puede elegir presentar el rendimiento financiero en:",
+    opts: [
+      "Un único estado de resultado integral o dos estados separados: un estado de resultados y un estado de otro resultado integral.",
+      "Solo un único estado de resultado integral obligatorio.",
+      "Solo dos estados separados, sin opción de presentación única.",
+      "Un estado de flujos de efectivo que incluya resultados del período."
+    ],
+    correct: 0,
+    feedback: "Correcto. La Sección 5 (párrafo 5.2) permite dos enfoques: un único estado de resultado integral, o dos documentos: primero el estado de resultados y luego el estado de otro resultado integral (ORI)."
+  },
+  {
+    id: 3,
+    text: "¿Cuál de las siguientes partidas <strong>NO</strong> corresponde a Otro Resultado Integral (ORI) bajo NIIF para PYMES?",
+    opts: [
+      "Cambios en el superávit de revaluación de activos de propiedades, planta y equipo.",
+      "Diferencias de cambio por conversión de negocios en el extranjero.",
+      "Ganancias y pérdidas actuariales en planes de beneficios definidos.",
+      "Ingresos ordinarios por ventas de bienes a clientes."
+    ],
+    correct: 3,
+    feedback: "Correcto. Los ingresos ordinarios por ventas forman parte del resultado del período (utilidad/pérdida), no del Otro Resultado Integral. El ORI incluye partidas específicas como revaluaciones, diferencias de conversión y actuariales."
+  },
+  {
+    id: 4,
+    text: "La entidad ABC presenta sus estados financieros bajo NIIF para PYMES. Durante el año reconoció una ganancia de revaluación de propiedades por $50.000. Esta partida debe presentarse:",
+    opts: [
+      "Directamente en el resultado del período como ingreso.",
+      "En la sección de Otro Resultado Integral del Estado de Resultado Integral.",
+      "Únicamente en el Estado de Situación Financiera como ajuste al activo.",
+      "No se reconoce bajo NIIF para PYMES, ya que no se permite el modelo de revaluación."
+    ],
+    correct: 1,
+    feedback: "Correcto. Las ganancias de revaluación de PP&E reconocidas por primera vez se presentan en el Otro Resultado Integral (ORI), acumulándose en el patrimonio como superávit de revaluación. No pasan por resultados."
+  },
+  {
+    id: 5,
+    text: "Según la Sección 5, ¿qué información mínima debe presentarse en el estado de resultado integral?",
+    opts: [
+      "Solo ingresos de actividades ordinarias y resultado del período.",
+      "Ingresos de actividades ordinarias, costos financieros, participación en resultados de asociadas, gasto por impuestos, resultado de operaciones discontinuadas y resultado del período.",
+      "Únicamente las partidas de Otro Resultado Integral y el total del patrimonio.",
+      "Saldo inicial del patrimonio, variaciones del período y saldo final."
+    ],
+    correct: 1,
+    feedback: "Correcto. El párrafo 5.5 exige como mínimo: ingresos de actividades ordinarias, costos financieros, participación en el resultado de asociadas/negocios conjuntos, gasto por impuestos, resultado de operaciones discontinuadas y el resultado del período."
+  },
+  {
+    id: 6,
+    text: "¿Cuál es el tratamiento correcto de los <strong>costos financieros</strong> en el Estado de Resultado Integral bajo NIIF para PYMES, Sección 5?",
+    opts: [
+      "Deben presentarse como parte del costo de ventas.",
+      "Se reconocen como una partida separada en el estado de resultado integral.",
+      "Se capitalizan obligatoriamente como mayor valor del activo relacionado.",
+      "Se reclasifican en el Otro Resultado Integral."
+    ],
+    correct: 1,
+    feedback: "Correcto. Los costos financieros (gastos por intereses) se presentan como una línea separada e identificable dentro del estado de resultado integral. NIIF para PYMES no permite la capitalización de costos por préstamos (Sección 25)."
+  },
+  {
+    id: 7,
+    text: "Empresa XYZ tiene operaciones en el extranjero. Al cierre del período, las diferencias de cambio por conversión de ese negocio ascienden a –$8.000. ¿Dónde se presenta esta partida?",
+    opts: [
+      "Como gasto operativo en el resultado del período.",
+      "En el Otro Resultado Integral, dentro del Estado de Resultado Integral.",
+      "Directamente reduciendo el capital social en el patrimonio.",
+      "En las notas a los estados financieros únicamente, sin presentación en los estados."
+    ],
+    correct: 1,
+    feedback: "Correcto. Las diferencias de cambio por conversión de un negocio en el extranjero son una de las partidas que la Sección 5 reconoce como Otro Resultado Integral. No se llevan al resultado del período hasta la disposición del negocio."
+  },
+  {
+    id: 8,
+    text: "Bajo NIIF para PYMES, ¿está permitido presentar partidas de ingreso o gasto como <strong>partidas extraordinarias</strong> en el Estado de Resultado Integral?",
+    opts: [
+      "Sí, siempre que sean inusuales y poco frecuentes.",
+      "Sí, pero solo para partidas que superen el 10% del resultado del período.",
+      "No. La Sección 5 prohíbe expresamente la presentación de partidas como extraordinarias.",
+      "Solo se permite si la entidad también aplica las NIIF completas."
+    ],
+    correct: 2,
+    feedback: "Correcto. El párrafo 5.10 de la Sección 5 establece explícitamente que 'una entidad no presentará ninguna partida de ingreso o gasto como partida extraordinaria', eliminando así ese concepto de la presentación."
+  },
+  {
+    id: 9,
+    text: "¿Cuándo puede una entidad que aplica NIIF para PYMES omitir información comparativa en el Estado de Resultado Integral?",
+    opts: [
+      "Cuando la entidad tiene menos de 5 empleados.",
+      "En ningún caso; la información comparativa del período anterior es siempre requerida.",
+      "Cuando el cambio contable o corrección de errores hace que la información previa sea irrelevante.",
+      "Cuando la entidad es de primer año de operaciones y no existe período comparable."
+    ],
+    correct: 3,
+    feedback: "Correcto. En el primer ejercicio de operaciones no existe período anterior comparable, por lo que no es obligatorio presentar cifras comparativas. En todos los demás casos, la Sección 3 exige información del período comparativo inmediatamente anterior."
+  },
+  {
+    id: 10,
+    text: "Una PYME reconoció ganancias actuariales de $12.000 sobre planes de beneficios definidos. Según la <strong>Sección 28 y Sección 5 de NIIF para PYMES</strong>, estas ganancias deben:",
+    opts: [
+      "Reconocerse íntegramente en resultados del período como ingreso.",
+      "Diferirse y amortizarse mediante el método del corredor.",
+      "Reconocerse en el Otro Resultado Integral y no reclasificarse posteriormente a resultados.",
+      "Presentarse como un pasivo diferido en el Estado de Situación Financiera."
+    ],
+    correct: 2,
+    feedback: "Correcto. La Sección 28 (Beneficios a Empleados) requiere que las ganancias y pérdidas actuariales de planes de beneficios definidos se reconozcan en el Otro Resultado Integral (ORI) en el período en que ocurren, sin posibilidad de reclasificación posterior al resultado del período."
+  }
+];
+
+let answered = {};
+
+function initQuiz() {
+  answered = {};
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('stat-done').textContent = '0';
+  updateProgress();
+
+  const container = document.getElementById('quiz-container');
+  container.innerHTML = '';
+
+  QUESTIONS.forEach((q, i) => {
+    const delay = i * 60;
+    const card = document.createElement('div');
+    card.className = 'q-card';
+    card.id = `card-${q.id}`;
+    card.style.animationDelay = delay + 'ms';
+
+    const optsHtml = q.opts.map((o, j) => `
+      <div class="opt" data-q="${q.id}" data-i="${j}" onclick="selectOpt(${q.id}, ${j})">
+        <div class="opt-letter">${String.fromCharCode(65+j)}</div>
+        <div class="opt-text">${o}</div>
+      </div>
+    `).join('');
+
+    card.innerHTML = `
+      <div class="q-num">Pregunta ${i+1}</div>
+      <div class="q-text">${q.text}</div>
+      <div class="options" id="opts-${q.id}">${optsHtml}</div>
+      <button class="btn-confirm" id="btn-${q.id}" disabled onclick="confirmAnswer(${q.id})">Confirmar respuesta</button>
+      <div class="feedback" id="fb-${q.id}"></div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+let selected = {};
+
+function selectOpt(qid, idx) {
+  if (answered[qid] !== undefined) return;
+  selected[qid] = idx;
+
+  const opts = document.querySelectorAll(`[data-q="${qid}"]`);
+  opts.forEach((el, j) => {
+    el.classList.toggle('selected', j === idx);
+  });
+
+  document.getElementById(`btn-${qid}`).disabled = false;
+}
+
+function confirmAnswer(qid) {
+  if (answered[qid] !== undefined) return;
+  const q = QUESTIONS.find(x => x.id === qid);
+  const chosen = selected[qid];
+  if (chosen === undefined) return;
+
+  answered[qid] = chosen;
+  const isOk = chosen === q.correct;
+
+  // Lock all opts
+  const opts = document.querySelectorAll(`[data-q="${qid}"]`);
+  opts.forEach((el, j) => {
+    el.classList.add('locked');
+    if (j === q.correct) el.classList.add('correct');
+    else if (j === chosen && !isOk) el.classList.add('wrong');
+    else el.classList.remove('selected');
+  });
+
+  // Feedback
+  const fb = document.getElementById(`fb-${qid}`);
+  fb.className = `feedback ${isOk ? 'ok' : 'err'}`;
+  fb.innerHTML = `<span class="feedback-icon">${isOk ? '✓' : '✗'}</span>${q.feedback}`;
+
+  // Hide button
+  document.getElementById(`btn-${qid}`).style.display = 'none';
+
+  // Card border
+  const card = document.getElementById(`card-${qid}`);
+  card.classList.add(isOk ? 'answered-ok' : 'answered-err');
+
+  // Update stats
+  const done = Object.keys(answered).length;
+  document.getElementById('stat-done').textContent = done;
+  updateProgress();
+
+  // Show results if all done
+  if (done === QUESTIONS.length) {
+    setTimeout(showResults, 700);
+  }
+}
+
+function updateProgress() {
+  const done = Object.keys(answered).length;
+  const pct = (done / QUESTIONS.length) * 100;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = `${done} de ${QUESTIONS.length} preguntas respondidas`;
+}
+
+function showResults() {
+  const correct = QUESTIONS.filter(q => answered[q.id] === q.correct).length;
+  const wrong = QUESTIONS.length - correct;
+  const score = Math.round((correct / QUESTIONS.length) * 100);
+
+  document.getElementById('res-score').textContent = score;
+  document.getElementById('res-ok').textContent = correct;
+  document.getElementById('res-err').textContent = wrong;
+
+  // Score color
+  const scoreEl = document.getElementById('res-score');
+  scoreEl.style.color = score >= 70 ? 'var(--ok)' : score >= 50 ? 'var(--accent)' : 'var(--err)';
+
+  // Message
+  let msg = '';
+  if (score === 100) msg = 'Excelente dominio de la Sección 5. Conoces en profundidad el Estado de Resultado Integral bajo NIIF para PYMES.';
+  else if (score >= 80) msg = 'Muy buen resultado. Tienes sólidos conocimientos de la Sección 5. Repasa las preguntas incorrectas para afianzar los conceptos.';
+  else if (score >= 60) msg = 'Resultado aceptable. Te recomendamos revisar los párrafos 5.2 al 5.10 de la norma para fortalecer las áreas con errores.';
+  else msg = 'Es necesario profundizar el estudio de la Sección 5 de NIIF para PYMES. Revisa la norma completa y vuelve a intentarlo.';
+  document.getElementById('res-msg').textContent = msg;
+
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Init on load
+initQuiz();
+</script>
+</body>
+</html>

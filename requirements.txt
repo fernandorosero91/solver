@@ -1,0 +1,8 @@
+# QuizSnap — Dependencias Python
+# Instalar con: pip install -r requirements.txt
+
+keyboard>=0.13.5        # Hotkeys globales
+pyautogui>=0.9.54       # Capturas de pantalla
+Pillow>=10.0.0          # Manejo de imágenes
+requests>=2.31.0        # Llamadas HTTP a las APIs
+python-dotenv>=1.0.0    # Variables de entorno desde .env
