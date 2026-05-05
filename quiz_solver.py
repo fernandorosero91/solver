@@ -42,7 +42,7 @@ GROQ_API_KEY      = os.getenv("GROQ_API_KEY", "")
 
 # ─── Modelos con visión (capas gratuitas / económicos) ─────────────────────────
 GEMINI_MODEL      = "gemini-3-flash-preview"    # Modelo Gemini 3 Flash
-OPENROUTER_MODEL  = "meta-llama/llama-4-maverick:free"  # Free tier en OpenRouter
+OPENROUTER_MODEL  = "openrouter/free"  # Router automático de modelos gratuitos con visión
 GROQ_MODEL        = "meta-llama/llama-4-scout-17b-16e-instruct"  # Soporta visión
 
 # ─── Hotkeys ──────────────────────────────────────────────────────────────────
@@ -186,7 +186,7 @@ def query_gemini(image_b64: str) -> str:
 
 
 def query_openrouter(image_b64: str) -> str:
-    """Consulta OpenRouter con un modelo de visión gratuito."""
+    """Consulta OpenRouter con un modelo de visión gratuito usando formato OpenAI."""
     if not OPENROUTER_API_KEY:
         raise ValueError("OPENROUTER_API_KEY no configurado")
 
@@ -194,18 +194,17 @@ def query_openrouter(image_b64: str) -> str:
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://quizsnap.local",
-        "X-Title": "QuizSnap",
+        "HTTP-Referer": "https://quizsnap.local",  # Opcional para rankings
+        "X-Title": "QuizSnap",  # Opcional para rankings
     }
 
     payload = {
         "model": OPENROUTER_MODEL,
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": "Analiza esta imagen y resuelve la pregunta:"},
+                    {"type": "text", "text": SYSTEM_PROMPT + "\n\nAnaliza esta imagen y resuelve la pregunta:"},
                     {
                         "type": "image_url",
                         "image_url": {
