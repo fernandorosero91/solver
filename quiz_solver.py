@@ -20,6 +20,7 @@ import pyautogui
 from PIL import Image
 import requests
 from dotenv import load_dotenv
+from google import genai
 
 # ─── Configuración de logging ──────────────────────────────────────────────────
 logging.basicConfig(
@@ -40,7 +41,7 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 GROQ_API_KEY      = os.getenv("GROQ_API_KEY", "")
 
 # ─── Modelos con visión (capas gratuitas / económicos) ─────────────────────────
-GEMINI_MODEL      = "gemini-1.5-flash"          # Gratuito con límites
+GEMINI_MODEL      = "gemini-3-flash-preview"    # Modelo Gemini 3 Flash
 OPENROUTER_MODEL  = "meta-llama/llama-4-maverick:free"  # Free tier en OpenRouter
 GROQ_MODEL        = "meta-llama/llama-4-scout-17b-16e-instruct"  # Soporta visión
 
@@ -60,7 +61,7 @@ INSTRUCCIONES:
 RESPUESTA: [Letra]
 RAZÓN: [Explicación breve en 1-2 oraciones del por qué es correcta]
 
-Si hay múltiples preguntas, responde cada una separada por una línea en blanco.
+IMPORTANTE: Responde SOLO UNA pregunta, aunque haya múltiples en la imagen.
 Si no hay pregunta clara, responde: "No se detectó pregunta de opción múltiple."""
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -156,41 +157,32 @@ def image_to_base64(img: Image.Image) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def query_gemini(image_b64: str) -> str:
-    """Consulta Google Gemini con visión."""
+    """Consulta Google Gemini con visión usando el nuevo SDK."""
     if not GEMINI_API_KEY:
         raise ValueError("GEMINI_API_KEY no configurado")
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
-    headers = {"Content-Type": "application/json"}
-    params  = {"key": GEMINI_API_KEY}
-
-    payload = {
-        "contents": [{
-            "parts": [
-                {"text": SYSTEM_PROMPT + "\n\nAnaliza la siguiente imagen:"},
-                {
-                    "inline_data": {
-                        "mime_type": "image/png",
-                        "data": image_b64
-                    }
-                }
-            ]
-        }],
-        "generationConfig": {
-            "temperature": 0.1,
-            "maxOutputTokens": 512,
-        }
-    }
-
-    resp = requests.post(url, headers=headers, params=params, json=payload, timeout=30)
-    resp.raise_for_status()
-    data = resp.json()
-
-    candidates = data.get("candidates", [])
-    if candidates:
-        parts = candidates[0].get("content", {}).get("parts", [])
-        return "".join(p.get("text", "") for p in parts)
-    raise ValueError("Respuesta vacía de Gemini")
+    try:
+        # Configurar el cliente con la API key
+        os.environ["GEMINI_API_KEY"] = GEMINI_API_KEY
+        client = genai.Client()
+        
+        # Decodificar la imagen base64
+        image_bytes = base64.b64decode(image_b64)
+        
+        # Crear el contenido con formato correcto
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents={
+                "parts": [
+                    {"text": SYSTEM_PROMPT + "\n\nAnaliza la siguiente imagen:"},
+                    {"inline_data": {"mime_type": "image/png", "data": image_b64}}
+                ]
+            }
+        )
+        
+        return response.text
+    except Exception as e:
+        raise ValueError(f"Error en Gemini: {str(e)}")
 
 
 def query_openrouter(image_b64: str) -> str:
