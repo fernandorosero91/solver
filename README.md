@@ -40,9 +40,28 @@ Edita `.env` y agrega tus keys:
 
 ### 3. Ejecutar
 
+**Windows (sin ventana):**
+```bash
+start_quizsnap.bat
+```
+La aplicación se ejecutará en segundo plano sin ventana visible.
+
+**Windows (con ventana para debugging):**
+```bash
+start_quizsnap_debug.bat
+```
+Mantiene la ventana abierta para ver logs en tiempo real.
+
+**Linux/Mac o manual:**
 ```bash
 python quiz_solver.py
 ```
+
+**Para detener la aplicación (Windows):**
+```bash
+stop_quizsnap.bat
+```
+O presiona `Ctrl+Shift+X` desde cualquier ventana.
 
 ## Uso
 
